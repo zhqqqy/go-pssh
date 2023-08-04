@@ -3,14 +3,15 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/pflag"
-	"github.com/xuchenCN/go-pssh/yaml"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+	"github.com/xuchenCN/go-pssh/yaml"
 )
 
 const (
@@ -56,13 +57,12 @@ func (c *config) addFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&c.KeyPath, "key", "k", "", "private key")
 	fs.StringVarP(&c.Cmd, "cmd", "c", "", "command")
 
-	//Scp command
+	// Scp command
 	fs.StringVarP(&c.scpLocal, "src", "s", "", "local file or directory when scp")
 	fs.StringVarP(&c.scpRemote, "dist", "d", "", "remote directory when scp")
 }
 
 func (c *config) validate(subCmd string) error {
-
 	if len(c.hostFile) <= 0 && len(c.hostList) <= 0 && len(c.configFile) <= 0 {
 		return fmt.Errorf("need file of host or hosts list or config file")
 	}
@@ -92,16 +92,15 @@ func (c *config) validate(subCmd string) error {
 	}
 
 	if len(subCmd) > 0 {
-
 		switch subCmd {
 		case scpCommand:
 
 			if len(c.scpLocal) <= 0 {
-				return fmt.Errorf("Using -s to specify local file or directory when scp")
+				return fmt.Errorf("using -s to specify local file or directory when scp")
 			}
 
 			if len(c.scpRemote) <= 0 {
-				return fmt.Errorf("Using -d to specify remote directory when scp")
+				return fmt.Errorf("using -d to specify remote directory when scp")
 			}
 
 			if len(c.scpLocal) > 0 {
@@ -112,9 +111,7 @@ func (c *config) validate(subCmd string) error {
 					log.Infof("convert path to %s", c.scpLocal)
 				}
 			}
-			break
 		}
-
 	}
 
 	return nil
@@ -150,7 +147,7 @@ func (c *config) listHosts() ([]string, error) {
 				}
 				line := strings.TrimSpace(string(b))
 				if ip := net.ParseIP(line); ip == nil {
-					log.Error("%s is not valid ip addr ignore it")
+					log.Errorf("%s is not valid ip addr ignore it", ip)
 					continue
 				}
 
@@ -166,7 +163,7 @@ func (c *config) listHosts() ([]string, error) {
 		for _, host := range list {
 			host = strings.TrimSpace(host)
 			if ip := net.ParseIP(host); ip == nil {
-				log.Error("%s is not valid ip addr ignore it")
+				log.Errorf("%s is not valid ip addr ignore it", ip)
 				continue
 			}
 
@@ -181,7 +178,7 @@ func (c *config) listHosts() ([]string, error) {
 	}
 
 	keys := make([]string, 0, len(result))
-	for k, _ := range result {
+	for k := range result {
 		keys = append(keys, k)
 	}
 
@@ -189,9 +186,7 @@ func (c *config) listHosts() ([]string, error) {
 }
 
 func (c *config) buildWorkers() (map[string]sshWorker, error) {
-
 	hosts, err := c.listHosts()
-
 	if err != nil {
 		return nil, err
 	}
@@ -201,10 +196,13 @@ func (c *config) buildWorkers() (map[string]sshWorker, error) {
 	for _, host := range hosts {
 		addr := fmt.Sprintf("%s:%v", host, c.Port)
 
-		sshWorker := sshWorker{HostSpec: HostSpec{User: c.User,
-			Addr:     addr,
-			Password: c.Password,
-			Cmd:      c.Cmd},
+		sshWorker := sshWorker{
+			HostSpec: HostSpec{
+				User:     c.User,
+				Addr:     addr,
+				Password: c.Password,
+				Cmd:      c.Cmd,
+			},
 			KeyPath:      c.KeyPath,
 			KeyEncrypted: c.KeyEncrypted,
 		}
@@ -212,7 +210,7 @@ func (c *config) buildWorkers() (map[string]sshWorker, error) {
 		sshWorkers[host] = sshWorker
 	}
 
-	//Load host special configuration
+	// Load host special configuration
 	if len(c.HostSpec) > 0 {
 		for _, spec := range c.HostSpec {
 
@@ -224,25 +222,25 @@ func (c *config) buildWorkers() (map[string]sshWorker, error) {
 				worker = sshWorker{HostSpec: spec}
 			}
 
-			//User
+			// User
 			if len(spec.User) > 0 {
 				worker.User = spec.User
 			} else {
 				worker.User = c.User
 			}
-			//Password
+			// Password
 			if len(spec.Password) > 0 {
 				worker.Password = spec.Password
 			} else {
 				worker.Password = c.Password
 			}
-			//Cmd
+			// Cmd
 			if len(spec.Cmd) > 0 {
 				worker.Cmd = spec.Cmd
 			} else {
 				worker.Cmd = c.Cmd
 			}
-			//Addr string has port
+			// Addr string has port
 			if len(addrSplited) > 1 {
 				worker.Addr = spec.Addr
 			} else {
